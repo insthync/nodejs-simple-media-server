@@ -17,25 +17,72 @@ app.use(bodyParser.urlencoded({ extended: true }));
 const server = http.createServer(app);
 const io = new Server(server);
 
+const playLists = [];
+
 io.on('connection', (socket) => {
   socket.on('current', (msg) => {
+    const playListId = msg.playListId;
+    const currentPlayList = playLists[playListId];
     // Response current media to the client
+    socket.emit("resp", {
+      playListId: playListId,
+      isPlaying: currentPlayList.isPlaying,
+      filePath: currentPlayList.filePath,
+      position: currentPlayList.position,
+    });
   });
 
   socket.on('play', (msg) => {
-
+    const playListId = msg.playListId;
+    const currentPlayList = playLists[playListId];
+    currentPlayList.isPlaying = true;
+    playLists[playListId] = currentPlayList;
+    socket.emit("resp", {
+      playListId: playListId,
+      isPlaying: currentPlayList.isPlaying,
+      filePath: currentPlayList.filePath,
+      position: currentPlayList.position,
+    });
   });
 
   socket.on('pause', (msg) => {
-
+    const playListId = msg.playListId;
+    const currentPlayList = playLists[playListId];
+    currentPlayList.isPlaying = false;
+    playLists[playListId] = currentPlayList;
+    socket.emit("resp", {
+      playListId: playListId,
+      isPlaying: currentPlayList.isPlaying,
+      filePath: currentPlayList.filePath,
+      position: currentPlayList.position,
+    });
   });
 
   socket.on('stop', (msg) => {
-
+    const playListId = msg.playListId;
+    const currentPlayList = playLists[playListId];
+    currentPlayList.isPlaying = false;
+    currentPlayList.position = 0;
+    playLists[playListId] = currentPlayList;
+    socket.emit("resp", {
+      playListId: currentPlayList.playListId,
+      isPlaying: currentPlayList.isPlaying,
+      filePath: currentPlayList.filePath,
+      position: currentPlayList.position,
+    });
   });
 
   socket.on('seek', (msg) => {
-
+    const playListId = msg.playListId;
+    const currentPlayList = playLists[playListId];
+    currentPlayList.position = msg.position;
+    playLists[playListId] = currentPlayList;
+    socket.emit("resp", {
+      playListId: currentPlayList.playListId,
+      isPlaying: currentPlayList.isPlaying,
+      filePath: currentPlayList.filePath,
+      position: currentPlayList.position,
+    });
   });
 });
 
@@ -107,4 +154,4 @@ app.get('/', async (req, res) => {
 const port = Number(process.env.SERVER_PORT || 8216);
 server.listen(port, () => {
   console.log("Simple media server listening on :" + port)
-})
+});

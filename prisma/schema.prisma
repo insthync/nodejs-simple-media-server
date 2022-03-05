@@ -11,7 +11,13 @@ datasource db {
 }
 
 model Videos {
-  id             String     @id
-  filePath       String
-  duration       Float
+  id               String     @id
+  playListId       String
+  filePath         String
+  duration         Float
+}
+
+model PlayList {
+  id               String     @id
+  title            String
 }
