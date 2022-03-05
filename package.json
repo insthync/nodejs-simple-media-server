@@ -1,0 +1,25 @@
+{
+  "name": "nodejs-simple-media-server",
+  "version": "1.0.0",
+  "description": "A simple media server which planned to made for any metaverse projects",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/insthync/nodejs-simple-media-server.git"
+  },
+  "author": "Ittipon Teerapruettikulchai",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/insthync/nodejs-simple-media-server/issues"
+  },
+  "homepage": "https://github.com/insthync/nodejs-simple-media-server#readme",
+  "dependencies": {
+    "dotenv": "^16.0.0",
+    "node-media-server": "^2.3.8",
+    "nodemon": "^2.0.15"
+  }
+}
