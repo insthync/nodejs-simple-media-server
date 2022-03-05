@@ -18,10 +18,14 @@
   },
   "homepage": "https://github.com/insthync/nodejs-simple-media-server#readme",
   "dependencies": {
-    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@prisma/client": "^3.10.0",
+    "body-parser": "^1.19.2",
     "dotenv": "^16.0.0",
-    "fluent-ffmpeg": "^2.1.2",
-    "node-media-server": "^2.3.8",
-    "nodemon": "^2.0.15"
+    "express": "^4.17.3",
+    "get-video-duration": "^4.0.0",
+    "morgan": "^1.10.0",
+    "nodemon": "^2.0.15",
+    "prisma": "^3.10.0",
+    "socket.io": "^4.4.1"
   }
 }
