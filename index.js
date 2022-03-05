@@ -5,8 +5,11 @@ const http = require('http');
 const morgan = require('morgan');
 const { Server } = require("socket.io");
 const { getVideoDurationInSeconds } = require('get-video-duration');
+const { PrismaClient } = require('@prisma/client');
+const { nanoid } =  require('nanoid');
 
 dotenv.config();
+const prisma = new PrismaClient();
 const app = express();
 app.use(morgan('combined'));
 app.use(bodyParser.json());
@@ -67,8 +70,15 @@ app.post('/upload', async (req, res) => {
         savePath
       );
 
+      const id = nanoid();
       // Store video to database
-
+      await prisma.videos.create({
+        data: {
+          id: id,
+          filePath: savePath,
+          duration: duration,
+        }
+      });
 
       res.status(200).send();
     }
@@ -78,11 +88,17 @@ app.post('/upload', async (req, res) => {
 });
 
 app.delete('/delete/:id', async (req, res) => {
-
+  await prisma.videos.delete({
+    where: {
+      id: req.query.id,
+    }
+  });
+  res.status(200).send();
 });
 
 app.get('/', async (req, res) => {
-
+  const videos = await prisma.videos.findMany();
+  res.status(200).send(videos);
 });
 
 const port = Number(process.env.SERVER_PORT || 8216);
