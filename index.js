@@ -6,7 +6,7 @@ const morgan = require('morgan');
 const { Server } = require("socket.io");
 const { getVideoDurationInSeconds } = require('get-video-duration');
 const { PrismaClient } = require('@prisma/client');
-const { nanoid } =  require('nanoid');
+const { nanoid } = require('nanoid');
 
 dotenv.config();
 const prisma = new PrismaClient();
@@ -39,7 +39,7 @@ io.on('connection', (socket) => {
   });
 });
 
-app.post('/upload', async (req, res) => {
+function validateUser(req, res, next) {
   // Validate connection by secret key which will be included in header -> authorization
   // TODO: Implements middleware if there are more than 1 function which will validate authorization like this
   const bearerHeader = req.headers['authorization']
@@ -54,7 +54,10 @@ app.post('/upload', async (req, res) => {
     res.sendStatus(400)
     return;
   }
+  next();
+};
 
+app.post('/upload', validateUser, async (req, res, next) => {
   try {
     if (!req.files) {
       // No files
@@ -87,7 +90,7 @@ app.post('/upload', async (req, res) => {
   }
 });
 
-app.delete('/delete/:id', async (req, res) => {
+app.delete('/delete/:id', validateUser, async (req, res, next) => {
   await prisma.videos.delete({
     where: {
       id: req.query.id,
