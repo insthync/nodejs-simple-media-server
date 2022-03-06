@@ -136,28 +136,36 @@ app.post('/upload', validateUser, async (req, res, next) => {
     } else {
       // Get and move video file to upload path
       const id = nanoid();
-      const video = req.files.video;
-      const fileName = video.name;
+      const file = req.files.file;
+      const fileName = file.name;
       const savePath = './uploads/' + id + '_' + fileName;
-      video.mv(savePath);
+      file.mv(savePath);
 
       const duration = await getVideoDurationInSeconds(
         savePath
       );
 
+      const countVideos = await prisma.videos.count({
+        where: {
+          playListId: req.body.playListId,
+        }
+      })
+
       // Store video to database
       await prisma.videos.create({
         data: {
           id: id,
-          playListId: req.playListId,
+          playListId: req.body.playListId,
           filePath: savePath,
           duration: duration,
+          sortOrder: countVideos,
         }
       });
 
       res.status(200).send();
     }
   } catch (err) {
+    console.log(err);
     res.status(500).send(err);
   }
 });
