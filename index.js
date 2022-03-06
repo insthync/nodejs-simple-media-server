@@ -21,6 +21,7 @@ const io = new Server(server);
 
 const playLists = {};
 const playListSubscribers = {};
+const deletingMediaIds = [];
 
 io.on('connection', (socket) => {
   socket.on('sub', (msg) => {
@@ -34,7 +35,7 @@ io.on('connection', (socket) => {
       mediaId: currentPlayList.mediaId,
       isPlaying: currentPlayList.isPlaying,
       filePath: currentPlayList.filePath,
-      position: currentPlayList.position,
+      time: currentPlayList.time,
     });
   });
 
@@ -50,7 +51,7 @@ io.on('connection', (socket) => {
         mediaId: currentPlayList.mediaId,
         isPlaying: currentPlayList.isPlaying,
         filePath: currentPlayList.filePath,
-        position: currentPlayList.position,
+        time: currentPlayList.time,
       });
     });
   });
@@ -67,7 +68,7 @@ io.on('connection', (socket) => {
         mediaId: currentPlayList.mediaId,
         isPlaying: currentPlayList.isPlaying,
         filePath: currentPlayList.filePath,
-        position: currentPlayList.position,
+        time: currentPlayList.time,
       });
     });
   });
@@ -77,7 +78,7 @@ io.on('connection', (socket) => {
     const currentPlayList = playLists[playListId];
     const currentPlayListSubscribers = playListSubscribers[playListId];
     currentPlayList.isPlaying = false;
-    currentPlayList.position = 0;
+    currentPlayList.time = 0;
     playLists[playListId] = currentPlayList;
     currentPlayListSubscribers.forEach(element => {
       element.emit("resp", {
@@ -85,7 +86,7 @@ io.on('connection', (socket) => {
         mediaId: currentPlayList.mediaId,
         isPlaying: currentPlayList.isPlaying,
         filePath: currentPlayList.filePath,
-        position: currentPlayList.position,
+        time: currentPlayList.time,
       });
     });
   });
@@ -94,7 +95,7 @@ io.on('connection', (socket) => {
     const playListId = msg.playListId;
     const currentPlayList = playLists[playListId];
     const currentPlayListSubscribers = playListSubscribers[playListId];
-    currentPlayList.position = msg.position;
+    currentPlayList.time = msg.time;
     playLists[playListId] = currentPlayList;
     currentPlayListSubscribers.forEach(element => {
       element.emit("resp", {
@@ -102,7 +103,7 @@ io.on('connection', (socket) => {
         mediaId: currentPlayList.mediaId,
         isPlaying: currentPlayList.isPlaying,
         filePath: currentPlayList.filePath,
-        position: currentPlayList.position,
+        time: currentPlayList.time,
       });
     });
   });
@@ -136,6 +137,7 @@ app.post('/upload', validateUser, async (req, res, next) => {
     } else {
       // Get and move video file to upload path
       const id = nanoid();
+      const playListId = req.body.playListId;
       const file = req.files.file;
       const fileName = file.name;
       const savePath = './uploads/' + id + '_' + fileName;
@@ -145,22 +147,36 @@ app.post('/upload', validateUser, async (req, res, next) => {
         savePath
       );
 
-      const countVideos = await prisma.videos.count({
+      const lastVideo = await prisma.videos.findFirst({
         where: {
-          playListId: req.body.playListId,
-        }
-      })
+          playListId: playListId,
+        },
+        orderBy: {
+          sortOrder: 'desc',
+        },
+      });
 
       // Store video to database
-      await prisma.videos.create({
+      const media = await prisma.videos.create({
         data: {
           id: id,
-          playListId: req.body.playListId,
+          playListId: playListId,
           filePath: savePath,
           duration: duration,
-          sortOrder: countVideos,
-        }
+          sortOrder: lastVideo ? lastVideo.sortOrder + 1 : 1,
+        },
       });
+
+      // Create new playlist if it not existed
+      if (!Object.hasOwnProperty.call(playLists, playListId)) {
+        playLists[playListId] = {
+          mediaId: media.id,
+          mediaDuration: media.duration,
+          filePath: media.filePath,
+          isPlaying: true,
+          time: 0,
+        };
+      }
 
       res.status(200).send();
     }
@@ -171,11 +187,7 @@ app.post('/upload', validateUser, async (req, res, next) => {
 });
 
 app.delete('/:id', validateUser, async (req, res, next) => {
-  await prisma.videos.delete({
-    where: {
-      id: req.query.id,
-    }
-  });
+  deletingMediaIds.push(req.query.id);
   res.status(200).send();
 });
 
@@ -185,11 +197,108 @@ app.get('/:playListId', async (req, res) => {
       playListId: playListId,
     },
     orderBy: {
-      sortOrder: 'asc'
-    }
+      sortOrder: 'asc',
+    },
   });
   res.status(200).send(videos);
 });
+
+// Playlist updating
+let lastFrameTime = new Date().getTime();
+async function playListsUpdate() {
+  const currentTime = new Date().getTime();
+  const deltaTime = currentTime - lastFrameTime;
+  const deletingPlayLists = [];
+  for (const playListId in playLists) {
+    if (!Object.hasOwnProperty.call(playLists, playListId)) {
+      continue;
+    }
+    const playList = playLists[playListId];
+    if (!playList.isPlaying) {
+      continue;
+    }
+    const indexOfDeletingMedia = deletingMediaIds.indexOf(playList.mediaId);
+    playList.time += deltaTime;
+    if (indexOfDeletingMedia >= 0 || playList.time >= playList.duration) {
+      // Load new meida to play
+      const medias = await prisma.videos.findMany({
+        where: {
+          playListId: playListId,
+        }
+      });
+      // Find index of new media
+      let indexOfNewMedia = -1;
+      for (let index = 0; index < medias.length; index++) {
+        const media = medias[index];
+        if (media.id != playList.mediaId) {
+          continue;
+        }
+        indexOfNewMedia = index + 1;
+        if (indexOfNewMedia >= medias.length) {
+          indexOfNewMedia = 0;
+        }
+        break;
+      }
+      // Delete the media after change to new video
+      if (indexOfDeletingMedia >= 0) {
+        deletingMediaIds.splice(indexOfDeletingMedia, 1);
+        if (medias.length == 1) {
+          indexOfNewMedia = -1;
+        }
+        await prisma.videos.delete({
+          where: {
+            id: playList.mediaId,
+          },
+        });
+      }
+      // Setup new media data to playlist
+      if (indexOfNewMedia >= 0) {
+        const media = medias[indexOfNewMedia];
+        playList.mediaId = media.id;
+        playList.mediaDuration = media.duration;
+        playList.filePath = media.filePath;
+        playList.isPlaying = true;
+        playList.time = 0;
+        console.log('play new media ' + indexOfNewMedia);
+      } else {
+        deletingPlayLists.push(playListId);
+        console.log('delete empty playlist ' + playListId);
+      }
+    }
+  }
+  // Delete empty playlists
+  for (const playListId of deletingPlayLists) {
+    delete playLists[playListId];
+  }
+  lastFrameTime = currentTime;
+}
+
+async function init() {
+  // Prepare playlists
+  const videos = await prisma.videos.findMany({
+    orderBy: {
+      sortOrder: 'asc',
+    },
+  });
+  for (const media of videos) {
+    // Store playlist data
+    if (Object.hasOwnProperty.call(playLists, media.playListId)) {
+      continue;
+    }
+    playLists[media.playListId] = {
+      mediaId: media.mediaId,
+      duration: media.duration,
+      filePath: media.filePath,
+      isPlaying: true,
+      time: 0,
+    };
+  }
+
+  // Updating video playing
+  setInterval(playListsUpdate, 250);
+}
+
+init();
 
 const port = Number(process.env.SERVER_PORT || 8216);
 server.listen(port, () => {
