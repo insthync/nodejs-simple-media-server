@@ -16,6 +16,8 @@ app.use(morgan('combined'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(fileupload());
+app.use(express.static('uploads'))
+
 const server = http.createServer(app);
 const io = new Server(server);
 
@@ -26,6 +28,7 @@ const deletingMediaIds = [];
 io.on('connection', (socket) => {
   socket.on('sub', (msg) => {
     const playListId = msg.playListId;
+    console.log(socket.id + ' requested to sub ' + playListId);
     if (!Object.hasOwnProperty.call(playLists, playListId)) {
       return;
     }
@@ -34,16 +37,19 @@ io.on('connection', (socket) => {
       playListSubscribers[playListId] = [];
     }
     const currentPlayListSubscribers = playListSubscribers[playListId];
-    currentPlayListSubscribers.push(socket);
-    // Response current media to the client
-    socket.emit("resp", {
-      playListId: playListId,
-      mediaId: currentPlayList.mediaId,
-      isPlaying: currentPlayList.isPlaying,
-      filePath: currentPlayList.filePath,
-      time: currentPlayList.time,
-      duration: currentPlayList.duration,
-    });
+    if (currentPlayListSubscribers.indexOf(socket) < 0) {
+      currentPlayListSubscribers.push(socket);
+      // Response current media to the client
+      socket.emit("resp", {
+        playListId: playListId,
+        mediaId: currentPlayList.mediaId,
+        isPlaying: currentPlayList.isPlaying,
+        filePath: currentPlayList.filePath,
+        time: currentPlayList.time,
+        duration: currentPlayList.duration,
+      });
+      console.log(socket.id + ' sub ' + playListId);
+    }
   });
 
   socket.on('play', (msg) => {
@@ -300,25 +306,33 @@ async function playListsUpdate() {
         playList.isPlaying = true;
         playList.time = 0;
         console.log('play new media ' + playListId + ' -> ' + indexOfNewMedia);
-        io.emit("resp", {
-          playListId: playListId,
-          mediaId: playList.mediaId,
-          isPlaying: playList.isPlaying,
-          filePath: playList.filePath,
-          time: playList.time,
-          duration: playList.duration,
-        });
+        if (Object.hasOwnProperty.call(playListSubscribers, playListId)) {
+          for (const subscriber of playListSubscribers[playListId]) {
+            subscriber.emit("resp", {
+              playListId: playListId,
+              mediaId: playList.mediaId,
+              isPlaying: playList.isPlaying,
+              filePath: playList.filePath,
+              time: playList.time,
+              duration: playList.duration,
+            });
+          }
+        }
       } else {
         deletingPlayLists.push(playListId);
         console.log('delete empty playlist ' + playListId);
-        io.emit("resp", {
-          playListId: playListId,
-          mediaId: '',
-          isPlaying: false,
-          filePath: '',
-          time: 0,
-          duration: 0,
-        });
+        if (Object.hasOwnProperty.call(playListSubscribers, playListId)) {
+          for (const subscriber of playListSubscribers[playListId]) {
+            subscriber.emit("resp", {
+              playListId: playListId,
+              mediaId: '',
+              isPlaying: false,
+              filePath: '',
+              time: 0,
+              duration: 0,
+            });
+          }
+        }
       }
     }
   }
