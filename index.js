@@ -16,7 +16,7 @@ app.use(morgan('combined'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(fileupload());
-app.use(express.static('uploads'))
+app.use('/uploads', express.static('uploads'));
 
 const server = http.createServer(app);
 const io = new Server(server);
