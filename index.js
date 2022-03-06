@@ -218,13 +218,17 @@ async function playListsUpdate() {
       continue;
     }
     const indexOfDeletingMedia = deletingMediaIds.indexOf(playList.mediaId);
-    playList.time += deltaTime;
+    playList.time += deltaTime * 0.001;
     if (indexOfDeletingMedia >= 0 || playList.time >= playList.duration) {
+      console.log('updating new media deleting? ' + indexOfDeletingMedia + ' played? ' + playList.time + ' >= ' + playList.duration);
       // Load new meida to play
       const medias = await prisma.videos.findMany({
         where: {
           playListId: playListId,
-        }
+        },
+        orderBy: {
+          sortOrder: 'asc',
+        },
       });
       // Find index of new media
       let indexOfNewMedia = -1;
@@ -241,6 +245,7 @@ async function playListsUpdate() {
       }
       // Delete the media after change to new video
       if (indexOfDeletingMedia >= 0) {
+        console.log('delete media ' + deletingMediaIds[indexOfDeletingMedia]);
         deletingMediaIds.splice(indexOfDeletingMedia, 1);
         if (medias.length == 1) {
           indexOfNewMedia = -1;
@@ -255,11 +260,11 @@ async function playListsUpdate() {
       if (indexOfNewMedia >= 0) {
         const media = medias[indexOfNewMedia];
         playList.mediaId = media.id;
-        playList.mediaDuration = media.duration;
+        playList.duration = media.duration;
         playList.filePath = media.filePath;
         playList.isPlaying = true;
         playList.time = 0;
-        console.log('play new media ' + indexOfNewMedia);
+        console.log('play new media ' + playListId + ' -> ' + indexOfNewMedia);
       } else {
         deletingPlayLists.push(playListId);
         console.log('delete empty playlist ' + playListId);
@@ -286,7 +291,7 @@ async function init() {
       continue;
     }
     playLists[media.playListId] = {
-      mediaId: media.mediaId,
+      mediaId: media.id,
       duration: media.duration,
       filePath: media.filePath,
       isPlaying: true,
