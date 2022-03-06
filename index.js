@@ -300,9 +300,25 @@ async function playListsUpdate() {
         playList.isPlaying = true;
         playList.time = 0;
         console.log('play new media ' + playListId + ' -> ' + indexOfNewMedia);
+        io.emit("resp", {
+          playListId: playListId,
+          mediaId: playList.mediaId,
+          isPlaying: playList.isPlaying,
+          filePath: playList.filePath,
+          time: playList.time,
+          duration: playList.duration,
+        });
       } else {
         deletingPlayLists.push(playListId);
         console.log('delete empty playlist ' + playListId);
+        io.emit("resp", {
+          playListId: playListId,
+          mediaId: '',
+          isPlaying: false,
+          filePath: '',
+          time: 0,
+          duration: 0,
+        });
       }
     }
   }
