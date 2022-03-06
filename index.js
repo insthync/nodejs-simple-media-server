@@ -26,7 +26,7 @@ const videos = await prisma.videos.findMany({
   }
 });
 videos.forEach(video => {
-  if (!Object.prototype.hasOwnProperty.call(playLists, video.playListId)) {
+  if (!Object.hasOwnProperty.call(playLists, video.playListId)) {
     playLists[video.playListId] = [];
   }
   playLists[video.playListId].push(video);
@@ -144,7 +144,7 @@ app.post('/upload', validateUser, async (req, res, next) => {
         }
       });
       // Store video to cache
-      if (!Object.prototype.hasOwnProperty.call(playLists, video.playListId)) {
+      if (!Object.hasOwnProperty.call(playLists, video.playListId)) {
         playLists[video.playListId] = [];
       }
       playLists[video.playListId].push(newVideo);
@@ -156,12 +156,25 @@ app.post('/upload', validateUser, async (req, res, next) => {
   }
 });
 
-app.delete('/delete/:id', validateUser, async (req, res, next) => {
+app.delete('/:id', validateUser, async (req, res, next) => {
   await prisma.videos.delete({
     where: {
       id: req.query.id,
     }
   });
+  // Find and delete from playlist
+  for (const playListId in playLists) {
+    if (!Object.hasOwnProperty.call(playLists, playListId)) {
+      continue;
+    }
+    const playList = playLists[playListId];
+    for (let i = playList.length - 1; i >= 0; --i) {
+      if (playList[i].id == req.query.id) {
+        playList.splice(i, 1);
+        break;
+      }
+    }
+  }
   res.status(200).send();
 });
 
