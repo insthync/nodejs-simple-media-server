@@ -17,7 +17,20 @@ app.use(bodyParser.urlencoded({ extended: true }));
 const server = http.createServer(app);
 const io = new Server(server);
 
-const playLists = [];
+const playLists = {};
+
+// Before start the server, load playlist
+const videos = await prisma.videos.findMany({
+  orderBy: {
+    sortOrder: 'asc'
+  }
+});
+videos.forEach(video => {
+  if (!Object.prototype.hasOwnProperty.call(playLists, video.playListId)) {
+    playLists[video.playListId] = [];
+  }
+  playLists[video.playListId].push(video);
+});
 
 io.on('connection', (socket) => {
   socket.on('current', (msg) => {
@@ -122,13 +135,19 @@ app.post('/upload', validateUser, async (req, res, next) => {
 
       const id = nanoid();
       // Store video to database
-      await prisma.videos.create({
+      const newVideo = await prisma.videos.create({
         data: {
           id: id,
+          playListId: req.playListId,
           filePath: savePath,
           duration: duration,
         }
       });
+      // Store video to cache
+      if (!Object.prototype.hasOwnProperty.call(playLists, video.playListId)) {
+        playLists[video.playListId] = [];
+      }
+      playLists[video.playListId].push(newVideo);
 
       res.status(200).send();
     }
@@ -146,9 +165,8 @@ app.delete('/delete/:id', validateUser, async (req, res, next) => {
   res.status(200).send();
 });
 
-app.get('/', async (req, res) => {
-  const videos = await prisma.videos.findMany();
-  res.status(200).send(videos);
+app.get('/:playListId', async (req, res) => {
+  res.status(200).send(playLists[req.query.playListId]);
 });
 
 const port = Number(process.env.SERVER_PORT || 8216);

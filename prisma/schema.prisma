@@ -15,9 +15,5 @@ model Videos {
   playListId       String
   filePath         String
   duration         Float
-}
-
-model PlayList {
-  id               String     @id
-  title            String
+  sortOrder        Int
 }
