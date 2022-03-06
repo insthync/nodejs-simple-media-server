@@ -228,14 +228,14 @@ app.post('/upload', validateUser, async (req, res, next) => {
 });
 
 app.delete('/:id', validateUser, async (req, res, next) => {
-  deletingMediaIds.push(req.query.id);
+  deletingMediaIds.push(req.params.id);
   res.status(200).send();
 });
 
 app.get('/:playListId', async (req, res) => {
   const videos = await prisma.videos.findMany({
     where: {
-      playListId: playListId,
+      playListId: req.params.playListId,
     },
     orderBy: {
       sortOrder: 'asc',
