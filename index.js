@@ -26,7 +26,13 @@ const deletingMediaIds = [];
 io.on('connection', (socket) => {
   socket.on('sub', (msg) => {
     const playListId = msg.playListId;
+    if (!Object.hasOwnProperty.call(playLists, playListId)) {
+      return;
+    }
     const currentPlayList = playLists[playListId];
+    if (!Object.hasOwnProperty.call(playListSubscribers, playListId)) {
+      playListSubscribers[playListId] = [];
+    }
     const currentPlayListSubscribers = playListSubscribers[playListId];
     currentPlayListSubscribers.push(socket);
     // Response current media to the client
@@ -36,12 +42,19 @@ io.on('connection', (socket) => {
       isPlaying: currentPlayList.isPlaying,
       filePath: currentPlayList.filePath,
       time: currentPlayList.time,
+      duration: currentPlayList.duration,
     });
   });
 
   socket.on('play', (msg) => {
     const playListId = msg.playListId;
+    if (!Object.hasOwnProperty.call(playLists, playListId)) {
+      return;
+    }
     const currentPlayList = playLists[playListId];
+    if (!Object.hasOwnProperty.call(playListSubscribers, playListId)) {
+      playListSubscribers[playListId] = [];
+    }
     const currentPlayListSubscribers = playListSubscribers[playListId];
     currentPlayList.isPlaying = true;
     playLists[playListId] = currentPlayList;
@@ -52,13 +65,20 @@ io.on('connection', (socket) => {
         isPlaying: currentPlayList.isPlaying,
         filePath: currentPlayList.filePath,
         time: currentPlayList.time,
+        duration: currentPlayList.duration,
       });
     });
   });
 
   socket.on('pause', (msg) => {
     const playListId = msg.playListId;
+    if (!Object.hasOwnProperty.call(playLists, playListId)) {
+      return;
+    }
     const currentPlayList = playLists[playListId];
+    if (!Object.hasOwnProperty.call(playListSubscribers, playListId)) {
+      playListSubscribers[playListId] = [];
+    }
     const currentPlayListSubscribers = playListSubscribers[playListId];
     currentPlayList.isPlaying = false;
     playLists[playListId] = currentPlayList;
@@ -69,13 +89,20 @@ io.on('connection', (socket) => {
         isPlaying: currentPlayList.isPlaying,
         filePath: currentPlayList.filePath,
         time: currentPlayList.time,
+        duration: currentPlayList.duration,
       });
     });
   });
 
   socket.on('stop', (msg) => {
     const playListId = msg.playListId;
+    if (!Object.hasOwnProperty.call(playLists, playListId)) {
+      return;
+    }
     const currentPlayList = playLists[playListId];
+    if (!Object.hasOwnProperty.call(playListSubscribers, playListId)) {
+      playListSubscribers[playListId] = [];
+    }
     const currentPlayListSubscribers = playListSubscribers[playListId];
     currentPlayList.isPlaying = false;
     currentPlayList.time = 0;
@@ -87,13 +114,20 @@ io.on('connection', (socket) => {
         isPlaying: currentPlayList.isPlaying,
         filePath: currentPlayList.filePath,
         time: currentPlayList.time,
+        duration: currentPlayList.duration,
       });
     });
   });
 
   socket.on('seek', (msg) => {
     const playListId = msg.playListId;
+    if (!Object.hasOwnProperty.call(playLists, playListId)) {
+      return;
+    }
     const currentPlayList = playLists[playListId];
+    if (!Object.hasOwnProperty.call(playListSubscribers, playListId)) {
+      playListSubscribers[playListId] = [];
+    }
     const currentPlayListSubscribers = playListSubscribers[playListId];
     currentPlayList.time = msg.time;
     playLists[playListId] = currentPlayList;
@@ -104,6 +138,7 @@ io.on('connection', (socket) => {
         isPlaying: currentPlayList.isPlaying,
         filePath: currentPlayList.filePath,
         time: currentPlayList.time,
+        duration: currentPlayList.duration,
       });
     });
   });
