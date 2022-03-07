@@ -40,17 +40,17 @@ io.on('connection', (socket) => {
     const currentPlayListSubscribers = playListSubscribers[playListId];
     if (currentPlayListSubscribers.indexOf(socket) < 0) {
       currentPlayListSubscribers.push(socket);
-      // Response current media to the client
-      socket.emit("resp", {
-        playListId: playListId,
-        mediaId: currentPlayList.mediaId,
-        isPlaying: currentPlayList.isPlaying,
-        filePath: currentPlayList.filePath,
-        time: currentPlayList.time,
-        duration: currentPlayList.duration,
-      });
       console.log(socket.id + ' sub ' + playListId);
     }
+    // Response current media to the client
+    socket.emit("resp", {
+      playListId: playListId,
+      mediaId: currentPlayList.mediaId,
+      isPlaying: currentPlayList.isPlaying,
+      filePath: currentPlayList.filePath,
+      time: currentPlayList.time,
+      duration: currentPlayList.duration,
+    });
   });
 
   socket.on('play', (msg) => {
