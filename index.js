@@ -166,7 +166,7 @@ io.on('connection', (socket) => {
     });
   });
 
-  socket.on('switch', (msg) => {
+  socket.on('switch', async (msg) => {
     const userToken = msg.userToken;
     if (adminUserTokens.indexOf(userToken) < 0) {
       return;
@@ -247,7 +247,7 @@ app.post('/add-user', validateSystem, async (req, res, next) => {
   if (adminUserTokens.indexOf(userToken) < 0) {
     adminUserTokens.push(userToken);
   }
-  res.status(200).send(connectingUser);
+  res.sendStatus(200);
 });
 
 app.post('/upload', validateUser, async (req, res, next) => {
