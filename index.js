@@ -24,6 +24,7 @@ const io = new Server(server);
 const playLists = {};
 const playListSubscribers = {};
 const deletingMediaIds = [];
+const adminUserTokens = [];
 
 io.on('connection', (socket) => {
   socket.on('sub', (msg) => {
@@ -53,6 +54,10 @@ io.on('connection', (socket) => {
   });
 
   socket.on('play', (msg) => {
+    const userToken = msg.userToken;
+    if (adminUserTokens.indexOf(userToken) < 0) {
+      return;
+    }
     const playListId = msg.playListId;
     if (!Object.hasOwnProperty.call(playLists, playListId)) {
       return;
@@ -77,6 +82,10 @@ io.on('connection', (socket) => {
   });
 
   socket.on('pause', (msg) => {
+    const userToken = msg.userToken;
+    if (adminUserTokens.indexOf(userToken) < 0) {
+      return;
+    }
     const playListId = msg.playListId;
     if (!Object.hasOwnProperty.call(playLists, playListId)) {
       return;
@@ -101,6 +110,10 @@ io.on('connection', (socket) => {
   });
 
   socket.on('stop', (msg) => {
+    const userToken = msg.userToken;
+    if (adminUserTokens.indexOf(userToken) < 0) {
+      return;
+    }
     const playListId = msg.playListId;
     if (!Object.hasOwnProperty.call(playLists, playListId)) {
       return;
@@ -126,6 +139,10 @@ io.on('connection', (socket) => {
   });
 
   socket.on('seek', (msg) => {
+    const userToken = msg.userToken;
+    if (adminUserTokens.indexOf(userToken) < 0) {
+      return;
+    }
     const playListId = msg.playListId;
     if (!Object.hasOwnProperty.call(playLists, playListId)) {
       return;
@@ -148,27 +165,90 @@ io.on('connection', (socket) => {
       });
     });
   });
+
+  socket.on('switch', (msg) => {
+    const userToken = msg.userToken;
+    if (adminUserTokens.indexOf(userToken) < 0) {
+      return;
+    }
+    const playListId = msg.playListId;
+    if (!Object.hasOwnProperty.call(playLists, playListId)) {
+      return;
+    }
+    const currentPlayList = playLists[playListId];
+    if (!Object.hasOwnProperty.call(playListSubscribers, playListId)) {
+      playListSubscribers[playListId] = [];
+    }
+    const mediaId = msg.mediaId;
+    const media = await prisma.videos.findFirst({
+      where: {
+        id: mediaId,
+        playListId: playListId,
+      },
+    });
+    // Can't find the media
+    if (!media) {
+      return;
+    }
+    // Switch media
+    currentPlayList.mediaId = mediaId;
+    currentPlayList.isPlaying = true;
+    currentPlayList.filePath = media.filePath;
+    currentPlayList.time = 0;
+    currentPlayList.duration = media.duration;
+    const currentPlayListSubscribers = playListSubscribers[playListId];
+    playLists[playListId] = currentPlayList;
+    currentPlayListSubscribers.forEach(element => {
+      element.emit("resp", {
+        playListId: playListId,
+        mediaId: currentPlayList.mediaId,
+        isPlaying: currentPlayList.isPlaying,
+        filePath: currentPlayList.filePath,
+        time: currentPlayList.time,
+        duration: currentPlayList.duration,
+      });
+    });
+  })
 });
 
-function validateUser(req, res, next) {
-  /*
-  // Validate connection by secret key which will be included in header -> authorization
-  // TODO: Implements middleware if there are more than 1 function which will validate authorization like this
+function validateSystem(req, res, next) {
   const bearerHeader = req.headers['authorization']
   if (!bearerHeader) {
-    res.sendStatus(400)
+    res.sendStatus(400);
     return;
   }
   // Substring `bearer `, length is 7
   const bearerToken = bearerHeader.substring(7)
   const secretKeys = JSON.parse(process.env.SECRET_KEYS || "[]")
   if (secretKeys.indexOf(bearerToken) < 0) {
-    res.sendStatus(400)
+    res.sendStatus(400);
     return;
   }
-  */
+  next();
+}
+
+function validateUser(req, res, next) {
+  const bearerHeader = req.headers['authorization']
+  if (!bearerHeader) {
+    res.sendStatus(400);
+    return;
+  }
+  // Substring `bearer `, length is 7
+  const bearerToken = bearerHeader.substring(7)
+  if (adminUserTokens.indexOf(bearerToken) < 0) {
+    res.sendStatus(400);
+    return;
+  }
   next();
 };
+
+app.post('/add-user', validateSystem, async (req, res, next) => {
+  const userToken = req.body.userToken;
+  if (adminUserTokens.indexOf(userToken) < 0) {
+    adminUserTokens.push(userToken);
+  }
+  res.status(200).send(connectingUser);
+});
 
 app.post('/upload', validateUser, async (req, res, next) => {
   try {
