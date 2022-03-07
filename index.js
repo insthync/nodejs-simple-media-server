@@ -28,8 +28,8 @@ const adminUserTokens = [];
 
 io.on('connection', (socket) => {
   socket.on('sub', (msg) => {
+    console.log(socket.id + ' requested to sub ' + msg.playListId);
     const playListId = msg.playListId;
-    console.log(socket.id + ' requested to sub ' + playListId);
     if (!Object.hasOwnProperty.call(playLists, playListId)) {
       return;
     }
