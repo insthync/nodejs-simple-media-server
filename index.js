@@ -30,10 +30,6 @@ io.on('connection', (socket) => {
   socket.on('sub', (msg) => {
     console.log(socket.id + ' requested to sub ' + msg.playListId);
     const playListId = msg.playListId;
-    if (!Object.hasOwnProperty.call(playLists, playListId)) {
-      return;
-    }
-    const currentPlayList = playLists[playListId];
     if (!Object.hasOwnProperty.call(playListSubscribers, playListId)) {
       playListSubscribers[playListId] = [];
     }
@@ -42,8 +38,13 @@ io.on('connection', (socket) => {
       currentPlayListSubscribers.push(socket);
       console.log(socket.id + ' sub ' + playListId);
     }
+    // Find the playlist, if found then `resp`
+    if (!Object.hasOwnProperty.call(playLists, playListId)) {
+      return;
+    }
+    const currentPlayList = playLists[playListId];
     // Response current media to the client
-    socket.emit("resp", {
+    socket.emit('resp', {
       playListId: playListId,
       mediaId: currentPlayList.mediaId,
       isPlaying: currentPlayList.isPlaying,
@@ -70,7 +71,7 @@ io.on('connection', (socket) => {
     currentPlayList.isPlaying = true;
     playLists[playListId] = currentPlayList;
     currentPlayListSubscribers.forEach(element => {
-      element.emit("resp", {
+      element.emit('resp', {
         playListId: playListId,
         mediaId: currentPlayList.mediaId,
         isPlaying: currentPlayList.isPlaying,
@@ -98,7 +99,7 @@ io.on('connection', (socket) => {
     currentPlayList.isPlaying = false;
     playLists[playListId] = currentPlayList;
     currentPlayListSubscribers.forEach(element => {
-      element.emit("resp", {
+      element.emit('resp', {
         playListId: playListId,
         mediaId: currentPlayList.mediaId,
         isPlaying: currentPlayList.isPlaying,
@@ -127,7 +128,7 @@ io.on('connection', (socket) => {
     currentPlayList.time = 0;
     playLists[playListId] = currentPlayList;
     currentPlayListSubscribers.forEach(element => {
-      element.emit("resp", {
+      element.emit('resp', {
         playListId: playListId,
         mediaId: currentPlayList.mediaId,
         isPlaying: currentPlayList.isPlaying,
@@ -155,7 +156,7 @@ io.on('connection', (socket) => {
     currentPlayList.time = msg.time;
     playLists[playListId] = currentPlayList;
     currentPlayListSubscribers.forEach(element => {
-      element.emit("resp", {
+      element.emit('resp', {
         playListId: playListId,
         mediaId: currentPlayList.mediaId,
         isPlaying: currentPlayList.isPlaying,
@@ -199,7 +200,7 @@ io.on('connection', (socket) => {
     const currentPlayListSubscribers = playListSubscribers[playListId];
     playLists[playListId] = currentPlayList;
     currentPlayListSubscribers.forEach(element => {
-      element.emit("resp", {
+      element.emit('resp', {
         playListId: playListId,
         mediaId: currentPlayList.mediaId,
         isPlaying: currentPlayList.isPlaying,
@@ -263,7 +264,7 @@ app.post('/upload', validateUser, async (req, res, next) => {
       const fileName = file.name;
       const savePath = './uploads/' + id + '_' + fileName;
       const fullSavePath = __dirname + '/uploads/' + id + '_' + fileName;
-      file.mv(fullSavePath);
+      await file.mv(fullSavePath);
 
       const duration = await getVideoDurationInSeconds(
         fullSavePath
@@ -300,6 +301,24 @@ app.post('/upload', validateUser, async (req, res, next) => {
         };
       }
 
+      if (!lastVideo) {
+        // This is first video
+        if (!Object.hasOwnProperty.call(playListSubscribers, playListId)) {
+          playListSubscribers[playListId] = [];
+        }
+        const currentPlayListSubscribers = playListSubscribers[playListId];
+        for (const currentPlayListSubscriber of currentPlayListSubscribers) {
+          currentPlayListSubscriber.emit('resp', {
+            playListId: playListId,
+            mediaId: media.id,
+            isPlaying: true,
+            filePath: savePath,
+            time: 0,
+            duration: duration,
+          });
+        }
+      }
+
       res.status(200).send();
     }
   } catch (err) {
@@ -322,6 +341,13 @@ app.get('/:playListId', async (req, res) => {
       sortOrder: 'asc',
     },
   });
+  // Don't include deleting media
+  for (let index = videos.length - 1; index >= 0; --index) {
+    const video = videos[index];
+    if (deletingMediaIds.indexOf(video.id) >= 0) {
+      videos.splice(index, 1);
+    }
+  }
   res.status(200).send(videos);
 });
 
@@ -342,7 +368,6 @@ async function playListsUpdate() {
     const indexOfDeletingMedia = deletingMediaIds.indexOf(playList.mediaId);
     playList.time += deltaTime * 0.001;
     if (indexOfDeletingMedia >= 0 || playList.time >= playList.duration) {
-      console.log('updating new media deleting? ' + indexOfDeletingMedia + ' played? ' + playList.time + ' >= ' + playList.duration);
       // Load new meida to play
       const medias = await prisma.videos.findMany({
         where: {
@@ -367,7 +392,6 @@ async function playListsUpdate() {
       }
       // Delete the media after change to new video
       if (indexOfDeletingMedia >= 0) {
-        console.log('delete media ' + deletingMediaIds[indexOfDeletingMedia]);
         deletingMediaIds.splice(indexOfDeletingMedia, 1);
         if (medias.length == 1) {
           indexOfNewMedia = -1;
@@ -386,10 +410,9 @@ async function playListsUpdate() {
         playList.filePath = media.filePath;
         playList.isPlaying = true;
         playList.time = 0;
-        console.log('play new media ' + playListId + ' -> ' + indexOfNewMedia);
         if (Object.hasOwnProperty.call(playListSubscribers, playListId)) {
           for (const subscriber of playListSubscribers[playListId]) {
-            subscriber.emit("resp", {
+            subscriber.emit('resp', {
               playListId: playListId,
               mediaId: playList.mediaId,
               isPlaying: playList.isPlaying,
@@ -401,10 +424,9 @@ async function playListsUpdate() {
         }
       } else {
         deletingPlayLists.push(playListId);
-        console.log('delete empty playlist ' + playListId);
         if (Object.hasOwnProperty.call(playListSubscribers, playListId)) {
           for (const subscriber of playListSubscribers[playListId]) {
-            subscriber.emit("resp", {
+            subscriber.emit('resp', {
               playListId: playListId,
               mediaId: '',
               isPlaying: false,
