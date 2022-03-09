@@ -262,10 +262,11 @@ app.post('/upload', validateUser, async (req, res, next) => {
       const file = req.files.file;
       const fileName = file.name;
       const savePath = './uploads/' + id + '_' + fileName;
-      file.mv(savePath);
+      const fullSavePath = __dirname + '/uploads/' + id + '_' + fileName;
+      file.mv(fullSavePath);
 
       const duration = await getVideoDurationInSeconds(
-        savePath
+        fullSavePath
       );
 
       const lastVideo = await prisma.videos.findFirst({
@@ -452,5 +453,5 @@ init();
 
 const port = Number(process.env.SERVER_PORT || 8216);
 server.listen(port, () => {
-  console.log("Simple media server listening on :" + port)
+  console.log("Simple media server listening on :" + port);
 });
