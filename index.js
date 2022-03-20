@@ -36,6 +36,7 @@ function sendResp(socket, playListId, currentPlayList) {
     volume: currentPlayList.volume,
     duration: currentPlayList.duration,
   });
+  console.log('RESP sent to ' + socket.id);
 }
 
 io.on('connection', (socket) => {
