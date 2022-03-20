@@ -50,6 +50,7 @@ io.on('connection', (socket) => {
       isPlaying: currentPlayList.isPlaying,
       filePath: currentPlayList.filePath,
       time: currentPlayList.time,
+      volume: currentPlayList.volume,
       duration: currentPlayList.duration,
     });
   });
@@ -77,6 +78,7 @@ io.on('connection', (socket) => {
         isPlaying: currentPlayList.isPlaying,
         filePath: currentPlayList.filePath,
         time: currentPlayList.time,
+        volume: currentPlayList.volume,
         duration: currentPlayList.duration,
       });
     });
@@ -105,6 +107,7 @@ io.on('connection', (socket) => {
         isPlaying: currentPlayList.isPlaying,
         filePath: currentPlayList.filePath,
         time: currentPlayList.time,
+        volume: currentPlayList.volume,
         duration: currentPlayList.duration,
       });
     });
@@ -134,6 +137,7 @@ io.on('connection', (socket) => {
         isPlaying: currentPlayList.isPlaying,
         filePath: currentPlayList.filePath,
         time: currentPlayList.time,
+        volume: currentPlayList.volume,
         duration: currentPlayList.duration,
       });
     });
@@ -162,6 +166,36 @@ io.on('connection', (socket) => {
         isPlaying: currentPlayList.isPlaying,
         filePath: currentPlayList.filePath,
         time: currentPlayList.time,
+        volume: currentPlayList.volume,
+        duration: currentPlayList.duration,
+      });
+    });
+  });
+
+  socket.on('volume', (msg) => {
+    const userToken = msg.userToken;
+    if (adminUserTokens.indexOf(userToken) < 0) {
+      return;
+    }
+    const playListId = msg.playListId;
+    if (!Object.hasOwnProperty.call(playLists, playListId)) {
+      return;
+    }
+    const currentPlayList = playLists[playListId];
+    if (!Object.hasOwnProperty.call(playListSubscribers, playListId)) {
+      playListSubscribers[playListId] = [];
+    }
+    const currentPlayListSubscribers = playListSubscribers[playListId];
+    currentPlayList.volume = msg.volume;
+    playLists[playListId] = currentPlayList;
+    currentPlayListSubscribers.forEach(element => {
+      element.emit('resp', {
+        playListId: playListId,
+        mediaId: currentPlayList.mediaId,
+        isPlaying: currentPlayList.isPlaying,
+        filePath: currentPlayList.filePath,
+        time: currentPlayList.time,
+        volume: currentPlayList.volume,
         duration: currentPlayList.duration,
       });
     });
@@ -206,6 +240,7 @@ io.on('connection', (socket) => {
         isPlaying: currentPlayList.isPlaying,
         filePath: currentPlayList.filePath,
         time: currentPlayList.time,
+        volume: currentPlayList.volume,
         duration: currentPlayList.duration,
       });
     });
@@ -247,6 +282,14 @@ app.post('/add-user', validateSystem, async (req, res, next) => {
   const userToken = req.body.userToken;
   if (adminUserTokens.indexOf(userToken) < 0) {
     adminUserTokens.push(userToken);
+  }
+  res.sendStatus(200);
+});
+
+app.post('/remove-user', validateSystem, async (req, res, next) => {
+  const index = adminUserTokens.indexOf(userToken);
+  if (index >= 0) {
+    adminUserTokens.splice(index, 1);
   }
   res.sendStatus(200);
 });
@@ -418,6 +461,7 @@ async function playListsUpdate() {
               isPlaying: playList.isPlaying,
               filePath: playList.filePath,
               time: playList.time,
+              volume: playList.volume,
               duration: playList.duration,
             });
           }
@@ -432,6 +476,7 @@ async function playListsUpdate() {
               isPlaying: false,
               filePath: '',
               time: 0,
+              volume: 0,
               duration: 0,
             });
           }
@@ -464,6 +509,7 @@ async function init() {
       filePath: media.filePath,
       isPlaying: true,
       time: 0,
+      volume: 1,
     };
   }
 
