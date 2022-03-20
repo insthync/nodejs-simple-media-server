@@ -56,6 +56,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('play', (msg) => {
+    console.log(socket.id + ' requested to play ' + msg.playListId + ' by user: ' + msg.userToken);
     const userToken = msg.userToken;
     if (adminUserTokens.indexOf(userToken) < 0) {
       return;
@@ -82,9 +83,11 @@ io.on('connection', (socket) => {
         duration: currentPlayList.duration,
       });
     });
+    console.log(socket.id + ' play ' + playListId);
   });
 
   socket.on('pause', (msg) => {
+    console.log(socket.id + ' requested to pause ' + msg.playListId + ' by user: ' + msg.userToken);
     const userToken = msg.userToken;
     if (adminUserTokens.indexOf(userToken) < 0) {
       return;
@@ -111,9 +114,11 @@ io.on('connection', (socket) => {
         duration: currentPlayList.duration,
       });
     });
+    console.log(socket.id + ' pause ' + playListId);
   });
 
   socket.on('stop', (msg) => {
+    console.log(socket.id + ' requested to stop ' + msg.playListId + ' by user: ' + msg.userToken);
     const userToken = msg.userToken;
     if (adminUserTokens.indexOf(userToken) < 0) {
       return;
@@ -141,9 +146,11 @@ io.on('connection', (socket) => {
         duration: currentPlayList.duration,
       });
     });
+    console.log(socket.id + ' stop ' + playListId);
   });
 
   socket.on('seek', (msg) => {
+    console.log(socket.id + ' requested to seek ' + msg.playListId + ' by user: ' + msg.userToken);
     const userToken = msg.userToken;
     if (adminUserTokens.indexOf(userToken) < 0) {
       return;
@@ -170,9 +177,11 @@ io.on('connection', (socket) => {
         duration: currentPlayList.duration,
       });
     });
+    console.log(socket.id + ' seek ' + playListId);
   });
 
   socket.on('volume', (msg) => {
+    console.log(socket.id + ' requested to volume ' + msg.playListId + ' by user: ' + msg.userToken);
     const userToken = msg.userToken;
     if (adminUserTokens.indexOf(userToken) < 0) {
       return;
@@ -199,9 +208,11 @@ io.on('connection', (socket) => {
         duration: currentPlayList.duration,
       });
     });
+    console.log(socket.id + ' volume ' + playListId);
   });
 
   socket.on('switch', async (msg) => {
+    console.log(socket.id + ' requested to switch ' + msg.playListId + ' by user: ' + msg.userToken);
     const userToken = msg.userToken;
     if (adminUserTokens.indexOf(userToken) < 0) {
       return;
@@ -244,7 +255,8 @@ io.on('connection', (socket) => {
         duration: currentPlayList.duration,
       });
     });
-  })
+    console.log(socket.id + ' switch ' + playListId);
+  });
 });
 
 function validateSystem(req, res, next) {
