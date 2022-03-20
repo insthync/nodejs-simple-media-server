@@ -26,7 +26,26 @@ const playListSubscribers = {};
 const deletingMediaIds = [];
 const adminUserTokens = [];
 
+function sendResp(socket, playListId, currentPlayList) {
+  socket.emit('resp', {
+    playListId: playListId,
+    mediaId: currentPlayList.mediaId,
+    isPlaying: currentPlayList.isPlaying,
+    filePath: currentPlayList.filePath,
+    time: currentPlayList.time,
+    volume: currentPlayList.volume,
+    duration: currentPlayList.duration,
+  });
+}
+
 io.on('connection', (socket) => {
+  socket.on('disconnect', function() {
+    const index = currentPlayListSubscribers.indexOf(socket);
+    if (index >= 0) {
+      currentPlayListSubscribers.splice(index, 1);
+    }
+  });
+
   socket.on('sub', (msg) => {
     console.log(socket.id + ' requested to sub ' + msg.playListId);
     const playListId = msg.playListId;
@@ -44,15 +63,7 @@ io.on('connection', (socket) => {
     }
     const currentPlayList = playLists[playListId];
     // Response current media to the client
-    socket.emit('resp', {
-      playListId: playListId,
-      mediaId: currentPlayList.mediaId,
-      isPlaying: currentPlayList.isPlaying,
-      filePath: currentPlayList.filePath,
-      time: currentPlayList.time,
-      volume: currentPlayList.volume,
-      duration: currentPlayList.duration,
-    });
+    sendResp(socket, playListId, currentPlayList);
   });
 
   socket.on('play', (msg) => {
@@ -73,15 +84,7 @@ io.on('connection', (socket) => {
     currentPlayList.isPlaying = true;
     playLists[playListId] = currentPlayList;
     currentPlayListSubscribers.forEach(element => {
-      element.emit('resp', {
-        playListId: playListId,
-        mediaId: currentPlayList.mediaId,
-        isPlaying: currentPlayList.isPlaying,
-        filePath: currentPlayList.filePath,
-        time: currentPlayList.time,
-        volume: currentPlayList.volume,
-        duration: currentPlayList.duration,
-      });
+      sendResp(element, playListId, currentPlayList);
     });
     console.log(socket.id + ' play ' + playListId);
   });
@@ -104,15 +107,7 @@ io.on('connection', (socket) => {
     currentPlayList.isPlaying = false;
     playLists[playListId] = currentPlayList;
     currentPlayListSubscribers.forEach(element => {
-      element.emit('resp', {
-        playListId: playListId,
-        mediaId: currentPlayList.mediaId,
-        isPlaying: currentPlayList.isPlaying,
-        filePath: currentPlayList.filePath,
-        time: currentPlayList.time,
-        volume: currentPlayList.volume,
-        duration: currentPlayList.duration,
-      });
+      sendResp(element, playListId, currentPlayList);
     });
     console.log(socket.id + ' pause ' + playListId);
   });
@@ -136,15 +131,7 @@ io.on('connection', (socket) => {
     currentPlayList.time = 0;
     playLists[playListId] = currentPlayList;
     currentPlayListSubscribers.forEach(element => {
-      element.emit('resp', {
-        playListId: playListId,
-        mediaId: currentPlayList.mediaId,
-        isPlaying: currentPlayList.isPlaying,
-        filePath: currentPlayList.filePath,
-        time: currentPlayList.time,
-        volume: currentPlayList.volume,
-        duration: currentPlayList.duration,
-      });
+      sendResp(element, playListId, currentPlayList);
     });
     console.log(socket.id + ' stop ' + playListId);
   });
@@ -167,15 +154,7 @@ io.on('connection', (socket) => {
     currentPlayList.time = msg.time;
     playLists[playListId] = currentPlayList;
     currentPlayListSubscribers.forEach(element => {
-      element.emit('resp', {
-        playListId: playListId,
-        mediaId: currentPlayList.mediaId,
-        isPlaying: currentPlayList.isPlaying,
-        filePath: currentPlayList.filePath,
-        time: currentPlayList.time,
-        volume: currentPlayList.volume,
-        duration: currentPlayList.duration,
-      });
+      sendResp(element, playListId, currentPlayList);
     });
     console.log(socket.id + ' seek ' + playListId);
   });
@@ -198,15 +177,7 @@ io.on('connection', (socket) => {
     currentPlayList.volume = msg.volume;
     playLists[playListId] = currentPlayList;
     currentPlayListSubscribers.forEach(element => {
-      element.emit('resp', {
-        playListId: playListId,
-        mediaId: currentPlayList.mediaId,
-        isPlaying: currentPlayList.isPlaying,
-        filePath: currentPlayList.filePath,
-        time: currentPlayList.time,
-        volume: currentPlayList.volume,
-        duration: currentPlayList.duration,
-      });
+      sendResp(element, playListId, currentPlayList);
     });
     console.log(socket.id + ' volume ' + playListId);
   });
@@ -245,15 +216,7 @@ io.on('connection', (socket) => {
     const currentPlayListSubscribers = playListSubscribers[playListId];
     playLists[playListId] = currentPlayList;
     currentPlayListSubscribers.forEach(element => {
-      element.emit('resp', {
-        playListId: playListId,
-        mediaId: currentPlayList.mediaId,
-        isPlaying: currentPlayList.isPlaying,
-        filePath: currentPlayList.filePath,
-        time: currentPlayList.time,
-        volume: currentPlayList.volume,
-        duration: currentPlayList.duration,
-      });
+      sendResp(element, playListId, currentPlayList);
     });
     console.log(socket.id + ' switch ' + playListId);
   });
