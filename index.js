@@ -287,6 +287,7 @@ app.post('/add-user', validateSystem, async (req, res, next) => {
 });
 
 app.post('/remove-user', validateSystem, async (req, res, next) => {
+  const userToken = req.body.userToken;
   const index = adminUserTokens.indexOf(userToken);
   if (index >= 0) {
     adminUserTokens.splice(index, 1);
