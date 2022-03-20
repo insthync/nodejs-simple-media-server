@@ -40,9 +40,14 @@ function sendResp(socket, playListId, currentPlayList) {
 
 io.on('connection', (socket) => {
   socket.on('disconnect', function() {
-    const index = currentPlayListSubscribers.indexOf(socket);
-    if (index >= 0) {
-      currentPlayListSubscribers.splice(index, 1);
+    for (const key in playListSubscribers) {
+      if (Object.hasOwnProperty.call(playListSubscribers, key)) {
+        const currentPlayListSubscribers = playListSubscribers[key];
+        const index = currentPlayListSubscribers.indexOf(socket);
+        if (index >= 0) {
+          currentPlayListSubscribers.splice(index, 1);
+        }
+      }
     }
   });
 
