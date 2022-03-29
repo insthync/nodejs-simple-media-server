@@ -2,7 +2,10 @@ const dotenv = require('dotenv');
 const express = require('express');
 const fileupload = require("express-fileupload");
 const bodyParser = require('body-parser');
-const http = require('http');
+const cors = require('cors');
+const fs = require("fs");
+const https = require("https");
+const http = require("http");
 const morgan = require('morgan');
 const { Server } = require("socket.io");
 const { getVideoDurationInSeconds } = require('get-video-duration');
@@ -15,11 +18,33 @@ const app = express();
 app.use(morgan('combined'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cors());
 app.use(fileupload());
 app.use('/uploads', express.static('uploads'));
 
-const server = http.createServer(app);
-const io = new Server(server);
+const port = Number(process.env.SERVER_PORT || 8000);
+const useHttps = Number(process.env.USE_HTTPS || 0) > 0;
+const keyFilePath = process.env.HTTPS_KEY_FILE_PATH || '';
+const certFilePath = process.env.HTTPS_CERT_FILE_PATH || '';
+const httpsPort = Number(process.env.HTTPS_SERVER_PORT || 8080);
+
+const io = new Server();
+const httpServer = http.createServer(app);
+io.attach(httpServer);
+httpServer.listen(port, () => {
+    console.log(`Simple media server listening on ${port}`)
+});
+
+if (useHttps) {
+    const httpsServer = https.createServer({
+        key: fs.readFileSync(keyFilePath),
+        cert: fs.readFileSync(certFilePath),
+    }, app);
+    io.attach(httpsServer);
+    httpsServer.listen(httpsPort, () => {
+        console.log(`Simple Socket.io Chat Server is listening on port ${httpsPort}`)
+    });
+}
 
 const playLists = {};
 const playListSubscribers = {};
@@ -499,8 +524,3 @@ async function init() {
 }
 
 init();
-
-const port = Number(process.env.SERVER_PORT || 8216);
-server.listen(port, () => {
-  console.log("Simple media server listening on :" + port);
-});
