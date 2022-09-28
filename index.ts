@@ -32,7 +32,7 @@ const io = new Server()
 const httpServer = http.createServer(app)
 io.attach(httpServer)
 httpServer.listen(port, () => {
-  console.log(`Simple media server listening on ${port}`)
+  console.log(`Simple media server is listening on ${port}`)
 })
 
 if (useHttps) {
@@ -42,7 +42,7 @@ if (useHttps) {
   }, app)
   io.attach(httpsServer)
   httpsServer.listen(httpsPort, () => {
-    console.log(`Simple Socket.io Chat Server is listening on port ${httpsPort}`)
+    console.log(`Simple media server is listening on port ${httpsPort}`)
   })
 }
 
