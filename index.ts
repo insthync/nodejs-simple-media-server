@@ -312,7 +312,7 @@ app.post('/upload', validateUser, async (req: express.Request, res: express.Resp
       const file: fileupload.UploadedFile = req.files.file as fileupload.UploadedFile
       const fileName = file.name
       const savePath = './uploads/' + id + '_' + fileName
-      const fullSavePath = __dirname + '/uploads/' + id + '_' + fileName
+      const fullSavePath = process.cwd() + '/uploads/' + id + '_' + fileName
       await file.mv(fullSavePath)
 
       const duration = await getVideoDurationInSeconds(
@@ -371,7 +371,7 @@ app.post('/upload', validateUser, async (req: express.Request, res: express.Resp
       res.status(200).send()
     }
   } catch (err) {
-    console.log(err)
+    console.error(err)
     res.status(500).send(err)
   }
 })
